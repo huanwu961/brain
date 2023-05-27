@@ -38,7 +38,7 @@ class NeuronConnection:
         print("Connection finished.")
         
     @ti.kernel
-    def init(self):
+    def init_topology(self):
         if self.conn_type == "continuous":
             for i in range(self.in_length):
                 shift = int(i / self.in_length * self.out_length)
@@ -48,9 +48,9 @@ class NeuronConnection:
               (self.type, self.in_pos[0], self.in_pos[1], self.out_pos[0], self.out_pos[1]))
     
     @ti.kernel
-    def connection_update(self):
+    def update(self):
         for i, j in ti.ndrange(self.in_length, self.m):
-            out = (self.output_position[i] + j) % self.out_length + self.out_pos[0]
+            out = (self.output_position[i] + j) % self.out_length
             self.out_array.cumulative_state[out] += self.in_array.current_state[self.in_pos[0]+i] * self.weight
             self.out_array.cumulative_weight[out] += self.weight
        
