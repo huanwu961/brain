@@ -1,13 +1,11 @@
 import cv2 as cv
-import numpy as np
-from area import NueronArea
 import random
-import json
-import os
 import time
 import taichi as ti
+from area import NeuronArea
 
-class NueronSense():
+
+class NeuronSense:
     def __init__(self, source, shape, name) -> None:
         self.name = name
         self.type = 'sense'
@@ -17,10 +15,11 @@ class NueronSense():
         self.size = 1
         for length in self.shape:
             self.size *= length
-        self.nueron_array = None
-        
+        self.neuron_array = None
+
+
 @ti.data_oriented
-class VisualSense(NueronSense):
+class VisualSense(NeuronSense):
     def __init__(self, source, shape, name="visual_"+str(random.randint(0, 100000))) -> None:
         super().__init__(source, shape, name)
         self.source_type = 'visual'
@@ -36,7 +35,7 @@ class VisualSense(NueronSense):
         frame = cv.resize(frame, self.shape[:2])
         s2 = time.time()
         
-        #self.nueron_array.current_state.from_numpy(frame.reshape(-1))
+        # self.neuron_array.current_state.from_numpy(frame.reshape(-1))
         s3 = time.time()
         print("read: %f" % (start1 - start))
         print("resize: %f" % (s2 - start1))
@@ -44,8 +43,8 @@ class VisualSense(NueronSense):
         print("VisualSense: read done")
         
     def connect(self, area):
-        self.nueron_array = area
+        self.neuron_array = area
         print("VisualSense: connected")
         
     def init(self):
-        self.nueron_array = NueronArea(self.size, 1, self.name)
+        self.neuron_array = NeuronArea(self.size, 1, self.name)

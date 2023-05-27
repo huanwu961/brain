@@ -1,37 +1,26 @@
 import taichi as ti
 import random
 
+
 @ti.data_oriented
-class NueronArea():
+class NeuronArea:
     def __init__(self, n=1, m=1, name="default"):
         self.name = name
         self.type = 'area'
-        self.n = n # number of neurons
-        self.m = m # output size
+        self.n = n  # number of neurons
+        self.m = m  # output size
         self.topology = {}
-        print("NueronArea %s initialized with n=%d, m=%d" % (name, n, m))
+        print("NeuronArea %s initialized with n=%d, m=%d" % (name, n, m))
 
-        self.current_state = ti.field(dtype=ti.f32, shape=(n))
-        self.cumulative_state = ti.field(dtype=ti.f32, shape=(n))
-        self.cumulative_weight = ti.field(dtype=ti.f32, shape=(n))
-        self.last_state = ti.field(dtype=ti.f32, shape=(n))
+        self.current_state = ti.field(dtype=ti.f32, shape=n)
+        self.cumulative_state = ti.field(dtype=ti.f32, shape=n)
+        self.cumulative_weight = ti.field(dtype=ti.f32, shape=n)
+        self.last_state = ti.field(dtype=ti.f32, shape=n)
         
-        self.output_position = ti.field(dtype=ti.i32, shape=(n))
+        self.output_position = ti.field(dtype=ti.i32, shape=n)
         self.weight = ti.field(dtype=ti.f32, shape=(n, m))
 
         self.weight.fill(0.5)
-        
-        '''
-        self.name = name
-        self.dim = len(shape)
-        self.shape = shape
-        self.m = m
-        self.arch = arch
-        self.array = ti.Vector.field(n=self.m+self.dim+4,dtype=ti.f32, shape=shape)
-        self.arch.init(self.array)
-        '''
-       
-    
         
     @ti.kernel
     def update_state(self):
@@ -54,14 +43,12 @@ class NueronArea():
     def update_weight(self):
         for i in ti.ndrange(self.n):
             for j in ti.ndrange(self.m):
-                tar = self.output_position[i] + j
                 tar = (self.output_position[i] + j) % self.n
                 if tar == i:
                     continue
                 correlation = (1 - 2*self.last_state[i]) * (1 - 2*self.current_state[tar])
                 product_x = self.last_state[i] * self.current_state[tar]
                 w = self.weight[i, j]
-                dw = 0
                 if w > 0.5:
                     dw = 1 - w
                 else:
@@ -73,9 +60,10 @@ class NueronArea():
         print("%s: update_state done" % self.name)
         self.update_weight()
         print("%s: update_weight done" % self.name)
-        
+
+
 @ti.data_oriented
-class SmallWorldArea(NueronArea):
+class SmallWorldArea(NeuronArea):
     def __init__(self, n, m, alpha, name="small_world_"+str(random.randint(0, 100000))):
         super().__init__(n, m, name)
         self.alpha = alpha

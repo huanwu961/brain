@@ -1,9 +1,9 @@
 import cv2 as cv
 import taichi as ti
-from core.NueronArray import SmallWorldArray
-from core.NueronSense import VisualSense
-from core.NueronConnection import NueronConnection
-from core.Brain import Brain
+from area import SmallWorldArea
+from sense import VisualSense
+from connection import NeuronConnection
+from brain import Brain
 import os
 
 if __name__ == '__main__':
@@ -15,10 +15,10 @@ if __name__ == '__main__':
     '''
     exponent_size_n = 23
     exponent_size_m = 4
-    main_array = SmallWorldArray(2**exponent_size_n, 2**exponent_size_m, alpha=2)
+    main_array = SmallWorldArea(2**exponent_size_n, 2**exponent_size_m, alpha=2)
     visual = VisualSense(source=0, shape=(512, 512, 3))
 
-    visual_main_conn = NueronConnection(visual.nueron_array, main_array, [0, 512*512*3], [0, 512*512*3])
+    visual_main_conn = NeuronConnection(visual.nueron_array, main_array, [0, 512*512*3], [0, 512*512*3])
     
     brain.add_area(main_array)
     brain.add_area(visual.nueron_array)
@@ -50,6 +50,5 @@ if __name__ == '__main__':
         cv.imshow("perception", in_frame)
         cv.imshow("imagination", out_frame)
         cv.waitKey(1)
-    #'''
-    
+
     

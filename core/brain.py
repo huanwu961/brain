@@ -1,13 +1,10 @@
 import random
 import time
-import numpy as np
-import taichi as ti
 import psutil
 import os
-import json
-import cv2 as cv
 
-class Brain():
+
+class Brain:
     def __init__(self, name="brain_"+str(random.randint(0, 1000000))):
         self.name = name
         self.type = "brain"
@@ -17,8 +14,8 @@ class Brain():
         self.actions = []
         self.info = {}
         
-    def add_area(self, nueron_array):
-        self.areas.append(nueron_array)
+    def add_area(self, neuron_array):
+        self.areas.append(neuron_array)
         
     def add_connection(self, connection):
         self.connections.append(connection)
@@ -47,33 +44,32 @@ class Brain():
                 action.act()
             self.print_info()
 
-    def get_nueron_area(self, name):
+    def get_neuron_area(self, name):
         for area in self.areas:
             if area.name == name:
                 return area
         return None
 
-    def get_nueron_connection(self, name):
+    def get_neuron_connection(self, name):
         for connection in self.connections:
             if connection.name == name:
                 return connection
         return None
     
-    def get_nueron_sense(self, name):
+    def get_neuron_sense(self, name):
         for sense in self.senses:
             if sense.name == name:
                 return sense
         return None
     
-    def get_nueron_action(self, name):
+    def get_neuron_action(self, name):
         for action in self.actions:
             if action.name == name:
                 return action
         return None
             
-    
     def print_info(self):
-        print("Read time: %f" % (self.info['read_time']- self.info['start']))
+        print("Read time: %f" % (self.info['read_time'] - self.info['start']))
         print("Connection time: %f" % (self.info['connection_time'] - self.info['read_time']))
         print("Main update time: %f" % (self.info['main_update_time'] - self.info['connection_time']))
         self.info['memory_size'] = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024

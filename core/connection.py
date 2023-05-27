@@ -1,12 +1,12 @@
 import taichi as ti
-import json
 import numpy as np
-import os
+
 
 @ti.data_oriented
-class NueronConnection():
-    def __init__(self, in_array=None, out_array=None, in_pos=[0, 1], out_pos=[0, 1], weight=1, m=1, conn_type="continuous"):
-        self.name='empty'
+class NeuronConnection:
+    def __init__(self, in_array=None, out_array=None, in_pos=(0, 1), out_pos=(0, 1), weight=1, m=1,
+                 conn_type="continuous"):
+        self.name = 'empty'
         if in_array is not None and out_array is not None:
             print(in_array, out_array)
             self.name = "%s->%s" % (in_array.name, out_array.name)
@@ -22,14 +22,13 @@ class NueronConnection():
         self.m = m
         self.in_length = in_pos[1] - in_pos[0]
         self.out_length = out_pos[1] - out_pos[0]
-        self.output_position = ti.field(dtype=ti.i32, shape=(self.in_length))
-        self.out_array_state = ti.field(dtype=ti.f32, shape=(self.out_length))
+        self.output_position = ti.field(dtype=ti.i32, shape=self.in_length)
+        self.out_array_state = ti.field(dtype=ti.f32, shape=self.out_length)
         self.init()
         print("Connection %s initialized with type=%s, weight=%f, m=%d" % (self.name, self.type, self.weight, self.m))
         print("ready to connect, waiting for target area...")
-        if in_array != None and out_array != None:
+        if in_array is not None and out_array is not None:
             self.connect(in_array, out_array)
-            
             
     def connect(self, area1, area2):
         self.in_array = area1
@@ -45,12 +44,13 @@ class NueronConnection():
                 shift = int(i / self.in_length * self.out_length)
                 self.output_position[i] = shift + self.out_pos[0]
 
-        print("Add connection type %s from [%d, %d] to [%d, %d]" % (self.type, self.in_pos[0], self.in_pos[1], self.out_pos[0], self.out_pos[1]))
+        print("Add connection type %s from [%d, %d] to [%d, %d]" %
+              (self.type, self.in_pos[0], self.in_pos[1], self.out_pos[0], self.out_pos[1]))
     
     @ti.kernel
     def connection_update(self):
         for i, j in ti.ndrange(self.in_length, self.m):
-            out = (self.output_position[i] + j)%self.out_length + self.out_pos[0]
+            out = (self.output_position[i] + j) % self.out_length + self.out_pos[0]
             self.out_array.cumulative_state[out] += self.in_array.current_state[self.in_pos[0]+i] * self.weight
             self.out_array.cumulative_weight[out] += self.weight
        
