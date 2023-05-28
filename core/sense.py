@@ -3,18 +3,21 @@ import random
 import time
 import taichi as ti
 from area import NeuronArea
+from base import Base
 
 
-class NeuronSense:
-    def __init__(self, source, shape, name) -> None:
+class NeuronSense(Base):
+    def __init__(self, source=0, shape=(1,), name='sense_'+str(random.randint(0, 100000))) -> None:
+        super().__init__(name=name, base_type='sense', source=source, shape=shape, dim=len(shape))
         self.name = name
-        self.type = 'sense'
-        self.shape = shape
+        self.base_type = 'sense'
         self.source = source
+        self.shape = shape
         self.dim = len(shape)
         self.size = 1
-        for length in self.shape:
+        for length in shape:
             self.size *= length
+        self.config['size'] = self.size
         self.neuron_array = None
 
 
@@ -22,7 +25,7 @@ class NeuronSense:
 class VisualSense(NeuronSense):
     def __init__(self, source, shape, name="visual_"+str(random.randint(0, 100000))) -> None:
         super().__init__(source, shape, name)
-        self.source_type = 'visual'
+        self.config['source_type'] = 'visual'
         self.videocapture = cv.VideoCapture(source)
         print("VideoCapture initialized")
     
@@ -41,7 +44,7 @@ class VisualSense(NeuronSense):
         print("resize: %f" % (s2 - start1))
         print("from_numpy: %f" % (s3 - s2))
         print("VisualSense: read done")
-        
+
     def connect(self, area):
         self.neuron_array = area
         print("VisualSense: connected")

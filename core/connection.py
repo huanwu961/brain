@@ -1,11 +1,13 @@
 import taichi as ti
 import numpy as np
+from base import Base
 
 
 @ti.data_oriented
-class NeuronConnection:
+class NeuronConnection(Base):
     def __init__(self, in_array=None, out_array=None, in_pos=(0, 1), out_pos=(0, 1), weight=1, m=1,
                  conn_type="continuous"):
+        super().__init__('default', 'connection')
         self.name = 'empty'
         if in_array is not None and out_array is not None:
             print(in_array, out_array)
@@ -24,12 +26,12 @@ class NeuronConnection:
         self.out_length = out_pos[1] - out_pos[0]
         self.output_position = ti.field(dtype=ti.i32, shape=self.in_length)
         self.out_array_state = ti.field(dtype=ti.f32, shape=self.out_length)
-        self.init()
+        self.init_topology()
         print("Connection %s initialized with type=%s, weight=%f, m=%d" % (self.name, self.type, self.weight, self.m))
         print("ready to connect, waiting for target area...")
         if in_array is not None and out_array is not None:
             self.connect(in_array, out_array)
-            
+
     def connect(self, area1, area2):
         self.in_array = area1
         self.out_array = area2
@@ -53,12 +55,12 @@ class NeuronConnection:
             out = (self.output_position[i] + j) % self.out_length
             self.out_array.cumulative_state[out] += self.in_array.current_state[self.in_pos[0]+i] * self.weight
             self.out_array.cumulative_weight[out] += self.weight
-       
-    @ti.kernel     
+
+    @ti.kernel
     def view_update(self):
         for i in range(self.out_length):
             self.out_array_state[i] = self.out_array.current_state[self.out_pos[0]+i]
-            
+
     def view_connection(self, in_shape, out_shape):
         in_frame = self.in_array.current_state.to_numpy()
         print(np.max(in_frame))

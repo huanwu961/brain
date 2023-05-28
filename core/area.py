@@ -1,12 +1,12 @@
 import taichi as ti
 import random
+from base import Base
 
 
 @ti.data_oriented
-class NeuronArea:
+class NeuronArea(Base):
     def __init__(self, n=1, m=1, name="default"):
-        self.name = name
-        self.type = 'area'
+        super().__init__(name, 'area', n, m)
         self.n = n  # number of neurons
         self.m = m  # output size
         self.topology = {}
@@ -21,9 +21,29 @@ class NeuronArea:
         self.weight = ti.field(dtype=ti.f32, shape=(n, m))
 
         self.weight.fill(0.5)
+
+        self.init_base()
+
+    def init_base(self):
+        self.array_list = {
+            "output_position": self.output_position,
+            "current_state": self.current_state,
+            "last_state": self.last_state,
+            "cumulative_state": self.current_state,
+            "cumulative_weight": self.cumulative_weight,
+            "weight": self.weight
+        }
+
+        self.config['n'] = self.n
+        self.config['m'] = self.m
+        self.config['topology'] = self.topology
         
     @ti.kernel
     def update_state(self):
+        for i in ti.ndrange(self.n):
+            self.last_state[i] = self.current_state[i]
+            self.cumulative_state[i] = 0
+            self.cumulative_weight[i] = 0
         for i, j in ti.ndrange(self.n, self.m):
             tar = (self.output_position[i] + j) % self.n
             if tar == i:
@@ -31,14 +51,11 @@ class NeuronArea:
             self.cumulative_state[tar] += self.weight[i, j] * self.current_state[i]
             self.cumulative_weight[tar] += self.weight[i, j]
         for i in range(self.n):
-            self.last_state[i] = self.current_state[i]
             if self.cumulative_weight[i] == 0:
                 self.current_state[i] = 0
             else:
                 self.current_state[i] = self.cumulative_state[i] / self.cumulative_weight[i]
-            self.cumulative_state[i] = 0
-            self.cumulative_weight[i] = 0
-    
+
     @ti.kernel
     def update_weight(self):
         for i in ti.ndrange(self.n):
@@ -83,5 +100,4 @@ class SmallWorldArea(NeuronArea):
                 sign = 1
             random_shift = int(r ** (-self.alpha)) * sign
             self.output_position[i] = i - self.m // 2 + random_shift
-        
-    
+

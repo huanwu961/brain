@@ -74,4 +74,4 @@ class Brain:
         print("Main update time: %f" % (self.info['main_update_time'] - self.info['connection_time']))
         self.info['memory_size'] = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
         print("mem usage: %f MB" % self.info['memory_size'])
-        
+
