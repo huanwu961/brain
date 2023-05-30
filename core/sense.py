@@ -8,9 +8,7 @@ from base import Base
 
 class NeuronSense(Base):
     def __init__(self, source=0, shape=(1,), name='sense_'+str(random.randint(0, 100000))) -> None:
-        super().__init__(name=name, base_type='sense', source=source, shape=shape, dim=len(shape))
-        self.name = name
-        self.base_type = 'sense'
+        super().__init__(name=name, class_name='NeuronSense', source=source, shape=shape, dim=len(shape))
         self.source = source
         self.shape = shape
         self.dim = len(shape)
@@ -25,7 +23,8 @@ class NeuronSense(Base):
 class VisualSense(NeuronSense):
     def __init__(self, source, shape, name="visual_"+str(random.randint(0, 100000))) -> None:
         super().__init__(source, shape, name)
-        self.config['source_type'] = 'visual'
+        self.class_name = 'VisualSense'
+        self.source_type = 'visual'
         self.videocapture = cv.VideoCapture(source)
         print("VideoCapture initialized")
     

@@ -1,6 +1,10 @@
-class NueronAction():
-    def __init__(self, name, nueron):
+from base import Base
+
+
+class NeuronAction(Base):
+    def __init__(self, name):
+        super().__init__(name, 'NeuronAction')
         pass
     
     def execute(self):
-        self.nueron.fire()
+        pass

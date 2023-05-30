@@ -6,7 +6,7 @@ from base import Base
 @ti.data_oriented
 class NeuronArea(Base):
     def __init__(self, n=1, m=1, name="default"):
-        super().__init__(name, 'area', n, m)
+        super().__init__(name, 'NeuronArea')
         self.n = n  # number of neurons
         self.m = m  # output size
         self.topology = {}
@@ -22,22 +22,6 @@ class NeuronArea(Base):
 
         self.weight.fill(0.5)
 
-        self.init_base()
-
-    def init_base(self):
-        self.array_list = {
-            "output_position": self.output_position,
-            "current_state": self.current_state,
-            "last_state": self.last_state,
-            "cumulative_state": self.current_state,
-            "cumulative_weight": self.cumulative_weight,
-            "weight": self.weight
-        }
-
-        self.config['n'] = self.n
-        self.config['m'] = self.m
-        self.config['topology'] = self.topology
-        
     @ti.kernel
     def update_state(self):
         for i in ti.ndrange(self.n):
@@ -100,4 +84,3 @@ class SmallWorldArea(NeuronArea):
                 sign = 1
             random_shift = int(r ** (-self.alpha)) * sign
             self.output_position[i] = i - self.m // 2 + random_shift
-

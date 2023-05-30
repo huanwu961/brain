@@ -2,32 +2,39 @@ import random
 import time
 import psutil
 import os
+from base import Base
+from area import NeuronArea
+from action import NeuronAction
+from sense import NeuronSense
+from connection import NeuronConnection
 
 
-class Brain:
+class Brain(Base):
     def __init__(self, name="brain_"+str(random.randint(0, 1000000))):
-        self.name = name
-        self.type = "brain"
+        super().__init__(name, "Brain")
         self.areas = []
         self.connections = []
         self.senses = []
         self.actions = []
         self.info = {}
-        
-    def add_area(self, neuron_array):
-        self.areas.append(neuron_array)
-        
-    def add_connection(self, connection):
-        self.connections.append(connection)
-        
-    def add_sense(self, sense):
-        self.senses.append(sense)
-        self.areas.append(sense.nueron_array)
-        
-    def add_action(self, action):
-        self.actions.append(action)
-            
+
+    def init(self):
+        for child in self.children:
+            if isinstance(child, NeuronArea):
+                self.areas.append(child)
+            elif isinstance(child, NeuronSense):
+                self.senses.append(child)
+            elif isinstance(child, NeuronConnection):
+                self.connections.append(child)
+                self.areas.append(child.neuron_array)
+            elif isinstance(child, NeuronAction):
+                self.actions.append(child)
+
+    def add(self, child):
+        self.children.append(child)
+
     def run(self):
+        self.init()
         while True:
             self.info['start'] = time.time()
             for sensor in self.senses:

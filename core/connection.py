@@ -7,12 +7,10 @@ from base import Base
 class NeuronConnection(Base):
     def __init__(self, in_array=None, out_array=None, in_pos=(0, 1), out_pos=(0, 1), weight=1, m=1,
                  conn_type="continuous"):
-        super().__init__('default', 'connection')
-        self.name = 'empty'
+        super().__init__('empty', 'NeuronConnection')
         if in_array is not None and out_array is not None:
             print(in_array, out_array)
             self.name = "%s->%s" % (in_array.name, out_array.name)
-        self.type = 'connection'
         self.in_name = ''
         self.out_name = ''
         self.in_array = in_array

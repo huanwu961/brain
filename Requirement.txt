@@ -1,0 +1,5 @@
+taichi
+opencv-python
+psutil
+numpy
+customtkinter
