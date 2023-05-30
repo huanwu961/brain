@@ -19,6 +19,7 @@ class NeuronArea(Base):
         
         self.output_position = ti.field(dtype=ti.i32, shape=n)
         self.weight = ti.field(dtype=ti.f32, shape=(n, m))
+        self.base = False
 
         self.weight.fill(0.5)
 

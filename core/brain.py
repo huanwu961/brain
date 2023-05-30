@@ -17,6 +17,7 @@ class Brain(Base):
         self.senses = []
         self.actions = []
         self.info = {}
+        self.base = False
 
     def init(self):
         for child in self.children:
@@ -29,9 +30,6 @@ class Brain(Base):
                 self.areas.append(child.neuron_array)
             elif isinstance(child, NeuronAction):
                 self.actions.append(child)
-
-    def add(self, child):
-        self.children.append(child)
 
     def run(self):
         self.init()

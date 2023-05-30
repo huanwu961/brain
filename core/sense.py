@@ -15,8 +15,8 @@ class NeuronSense(Base):
         self.size = 1
         for length in shape:
             self.size *= length
-        self.config['size'] = self.size
         self.neuron_array = None
+        self.base = False
 
 
 @ti.data_oriented

@@ -8,6 +8,7 @@ class NeuronConnection(Base):
     def __init__(self, in_array=None, out_array=None, in_pos=(0, 1), out_pos=(0, 1), weight=1, m=1,
                  conn_type="continuous"):
         super().__init__('empty', 'NeuronConnection')
+        self.base = False
         if in_array is not None and out_array is not None:
             print(in_array, out_array)
             self.name = "%s->%s" % (in_array.name, out_array.name)
@@ -25,7 +26,7 @@ class NeuronConnection(Base):
         self.output_position = ti.field(dtype=ti.i32, shape=self.in_length)
         self.out_array_state = ti.field(dtype=ti.f32, shape=self.out_length)
         self.init_topology()
-        print("Connection %s initialized with type=%s, weight=%f, m=%d" % (self.name, self.type, self.weight, self.m))
+        print("Connection %s initialized with type=%s, weight=%f, m=%d" % (self.name, self.conn_type, self.weight, self.m))
         print("ready to connect, waiting for target area...")
         if in_array is not None and out_array is not None:
             self.connect(in_array, out_array)
@@ -45,7 +46,7 @@ class NeuronConnection(Base):
                 self.output_position[i] = shift + self.out_pos[0]
 
         print("Add connection type %s from [%d, %d] to [%d, %d]" %
-              (self.type, self.in_pos[0], self.in_pos[1], self.out_pos[0], self.out_pos[1]))
+              (self.conn_type, self.in_pos[0], self.in_pos[1], self.out_pos[0], self.out_pos[1]))
     
     @ti.kernel
     def update(self):

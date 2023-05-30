@@ -18,6 +18,8 @@ class Base:
 
         self.configuration = {"meta": {}, "array": [], "children": []}
 
+        self.base = True
+
     def save(self, root):
         # type check
         print("start saving...")
@@ -51,33 +53,45 @@ class Base:
         for child in self.children:
             child.save(children_dir)
 
-    def load(self, root):
-        new_obj = self.load_config(root)
-        self.children.append(new_obj)
-        utils.recursive_cast(self)
-        self.load_array(root, self)
+    def load(self, root=None):
+        if type(root) == str:
+            self.load_config(root)
+            utils.recursive_cast(self)
+            self.load_array(root)
+        elif type(root) == dict:
+            self.load_config(root)
+            utils.recursive_cast(self)
+        else:
+            print("please input the configuration, exiting..")
+            exit(0)
 
     def load_config(self, config):
         if type(config) == str:
+            if os.path.isdir(config) and os.path.exists(os.path.join(config, 'config.json')):
+                root = config
+                config_path = os.path.join(config, "config.json")
+            else:
+                print("[%s]: loading invalid directory, exiting.." % self.name)
+                exit(0)
             try:
-                config = json.load(open(config))
+                config = json.load(open(config_path))
             except FileNotFoundError:
                 print("[%s]: config file not found" % self.name)
-                exit()
-        obj = Base()
+                exit(0)
         for key, val in config["meta"].items():
-            setattr(obj, key, val)
+            setattr(self, key, val)
 
         for child_config in config["children"]:
-            self.children.append(self.load_config(child_config))
+            child_obj = Base()
+            child_obj.load_config(child_config)
+            self.children.append(child_obj)
         print("[%s]: finish loading config file" % self.name)
-        return obj
 
-    def load_array(self, root_path, root_obj):
-        for _item_str in dir(root_obj):
-            _item = getattr(root_obj, _item_str)
+    def load_array(self, root_path):
+        for _item_str in dir(self):
+            _item = getattr(self, _item_str)
             if isinstance(_item, ti.ScalarField):
-                print('loading array: ' + f'{_item_str}' + '...')
+                print(f'[{self.name}]: loading array: ' + f'{_item_str}' + '...')
                 try:
                     _item.from_numpy(os.path.join(root_path, "array", _item_str + ".npy"))
                 except FileNotFoundError:
@@ -85,9 +99,9 @@ class Base:
                     exit()
         print('[%s]: finished loading array data' % self.name)
 
-        for child in root_obj.children:
-            child_root_path = os.path.join(root_path, "children")
-            self.load_array(child_root_path, child)
+        for child in self.children:
+            child_root_path = os.path.join(root_path, "children", child.name)
+            child.load_array(child_root_path)
 
     def config(self):
         for item in dir(self):
@@ -108,5 +122,8 @@ class Base:
             self.configuration["children"].append(child.config())
 
         return self.configuration
+
+    def add(self, child):
+        self.children.append(child)
 
 

@@ -4,7 +4,7 @@ import taichi as ti
 def json_check(obj):
     success = True
     if isinstance(obj, dict):
-        for key, val in obj:
+        for key, val in obj.items():
             success = success and json_check(val)
     if isinstance(obj, list):
         for item in obj:
@@ -32,8 +32,9 @@ def auto_cast(base_obj):
     if not isinstance(base_obj, Base):
         print("TypeError: Not Subclass of 'Base', exiting..")
         exit(0)
-    if type(base_obj) != Base:
+    if not base_obj.base:
         return base_obj
+    from brain import Brain
     from area import NeuronArea
     from sense import NeuronSense
     from connection import NeuronConnection
@@ -51,7 +52,7 @@ def auto_cast(base_obj):
 
 def recursive_cast(obj):
     if hasattr(obj, "children") and isinstance(obj.children, list):
-        for _ in len(obj.children):
+        for _ in range(len(obj.children)):
             new_child = auto_cast(obj.children.pop(0))
             obj.children.append(new_child)
-            recursive_cast(obj)
+            recursive_cast(new_child)
