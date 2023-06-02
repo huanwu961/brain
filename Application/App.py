@@ -1,76 +1,87 @@
-import sys
-import cv2
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+import customtkinter as ctk
+import tkinter as tk
 
-class App(QMainWindow):
+import home
+import build
+import run
+import settings
+import monitor
+
+
+class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("My App")
-        self.setGeometry(100, 100, 600, 300)
-        self.setStyleSheet("background-color: #222222;")
+        self.project_root = ""
+        '''
+         # Load the config file
+        if not os.path.exists(os.path.expanduser('~/.config/brain/config.json')):
+            self.create_project_root()
 
-        # Create container on left side of main GUI
-        container = QWidget()
-        container.setStyleSheet("background-color: #111111;")
-        container.setFixedWidth(150)
-        container_layout = QVBoxLayout()
-        container.setLayout(container_layout)
+        with open(os.path.expanduser('~/.config/brain/config.json'), 'r+') as config_file:
+            self.project_root = json.load(config_file)['project_root']
+            self.auto_save_config = json.load(config_file)['auto_save']
 
-        # Create video button inside container
-        video_button = QPushButton("Video")
-        video_button.setStyleSheet("background-color: none; color: white; border: none;")
-        video_button.clicked.connect(self.show_camera)
-        container_layout.addWidget(video_button)
+        # find all the brains
+        self.brains = []
+        for file in os.listdir(self.project_root):
+            if os.path.exists(os.path.join(self.project_root, file, 'config.json')):
+                self.brains.append(file)
+        '''
+        # Create the main window
+        self.title("Brain")
+        self.geometry("640x480")
 
-        # Add container to main layout
-        main_layout = QHBoxLayout()
-        main_layout.addWidget(container)
-        main_layout.addStretch()
+        # Configure the grid of the main window
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure((1, 2), weight=1)
 
-        # Create widget to display camera feed
-        self.camera_widget = QLabel()
-        self.camera_widget.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(self.camera_widget)
+        # Create menu in the side bar
+        self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=0)
+        self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
+        self.sidebar_frame.grid_rowconfigure(5, weight=1)
 
-        # Create main widget and set layout
-        main_widget = QWidget()
-        main_widget.setLayout(main_layout)
-        self.setCentralWidget(main_widget)
+        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="Brain", font=("Arial", 20))
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="nsew")
+        self.home_button = ctk.CTkButton(self.sidebar_frame, text="Home", command=self.go_home)
+        self.home_button.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
+        self.build_button = ctk.CTkButton(self.sidebar_frame, text="Build", command=self.go_build)
+        self.build_button.grid(row=2, column=0, padx=20, pady=10, sticky="nsew")
+        self.run_button = ctk.CTkButton(self.sidebar_frame, text="Run", command=self.go_run)
+        self.run_button.grid(row=3, column=0, padx=20, pady=10, sticky="nsew")
+        self.monitor_button = ctk.CTkButton(self.sidebar_frame, text="Monitor", command=self.go_monitor)
+        self.monitor_button.grid(row=4, column=0, padx=20, pady=10, sticky="nsew")
+        self.settings_button = ctk.CTkButton(self.sidebar_frame, text="Settings", command=self.go_settings)
+        self.settings_button.grid(row=5, column=0, padx=20, pady=20, sticky="s")
 
-        # Create VideoCapture object for camera feed
-        self.cap = cv2.VideoCapture(0)
+        # Create the main frame
+        self.home = home.HomeFrame(self)
+        self.home.grid(row=0, column=1, rowspan=4, sticky="nsew")
+        self.build = build.BuildFrame(self)
+        self.build.grid(row=0, column=1, rowspan=4, sticky="nsew")
+        self.run = run.RunFrame(self)
+        self.run.grid(row=0, column=1, rowspan=4, sticky="nsew")
+        self.monitor = monitor.MonitorFrame(self)
+        self.monitor.grid(row=0, column=1, rowspan=4, sticky="nsew")
+        self.settings = settings.SettingsFrame(self)
+        self.settings.grid(row=0, column=1, rowspan=4, sticky="nsew")
 
-        # Create QTimer object for camera feed update
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_camera)
-        self.timer.start(10)
+    def go_home(self):
+        self.home.tkraise()
 
-    def show_camera(self):
-        # Open camera window
-        camera_window = QMainWindow()
-        camera_window.setWindowTitle("Camera Feed")
+    def go_build(self):
+        self.build.tkraise()
 
-        # Create widget to display camera feed
-        camera_widget = QLabel()
-        camera_widget.setAlignment(Qt.AlignCenter)
-        camera_window.setCentralWidget(camera_widget)
+    def go_run(self):
+        self.run.tkraise()
 
-        # Show camera window
-        camera_window.show()
+    def go_settings(self):
+        self.settings.tkraise()
 
-    def update_camera(self):
-        # Read frame from camera
-        ret, frame = self.cap.read()
-        if ret:
-            # Convert frame to QImage and display in widget
-            image = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format_RGB888)
-            pixmap = QPixmap.fromImage(image)
-            self.camera_widget.setPixmap(pixmap)
+    def go_monitor(self):
+        self.monitor.tkraise()
+
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = App()
-    window.show()
-    sys.exit(app.exec())
+    app = App()
+    app.mainloop()
