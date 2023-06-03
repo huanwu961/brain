@@ -5,9 +5,38 @@ import numpy as np
 import utils
 import taichi as ti
 
+'''
+-- Base Class --
+Base class is a base data structure that describes an object with a bunch of large arrays and
+a meta config file. It can automatically handle parameter saving, loading and monitoring.
+
+It separates configuration files and array data, since array can be very large.
+
+The base class only has configurations. Only when it is converted into actual sub-class, the
+large arrays then are initialized or loaded as taichi.field to device.
+
+It has a tree structure. Every base object can has some base object as children. For every
+program running, there is always one Base object as root. All the save, load method can all
+be executed recursively.
+
+The config file has four part:
+-- meta: store those hyper-parameters
+-- array: name, data type and shape of each arrays
+-- children: child's configuration file
+-- log: monitor data, recording the macro indicators for each array can be dynamically 
+        visualized in GUI
+'''
+
 
 class Base:
-    def __init__(self, name="root", class_name="Base", config=None, **kwarg):
+    def __init__(self,
+                 name="root",           # name of the object
+                 class_name="Base",     # sub-class name, for factory
+                 config=None,           # config in .json, for object initialization
+                 log_frequency=10,      # number of normal updates between monitor data update
+                 log_length=100,        # length of monitor log data
+                 **kwarg                # other arguments
+                 ):
         # meta data
         self.name = name
         self.class_name = class_name
@@ -16,9 +45,12 @@ class Base:
         # for future construction
         self.children = []
 
-        self.configuration = {"meta": {}, "array": [], "children": []}
+        self.configuration = {"meta": {}, "array": [], "children": [], "log": []}
 
         self.base = True
+
+        self.log_frequency = log_frequency
+        self.log_length = log_length
 
     def save(self, root):
         # type check
@@ -125,5 +157,21 @@ class Base:
 
     def add(self, child):
         self.children.append(child)
+
+    def monitor(self):
+        log = {'time': time.time()}
+        for array_config in self.configuration['array']:
+            name = array_config['name']
+            array = getattr(self, name).to_numpy()
+            array_log = {
+                "max": np.max(array),
+                "min": np.min(array),
+                "mean": np.mean(array),
+                "std": np.std(array),
+            }
+            log[name] = array_log
+        self.configuration['log'].append(log)
+        if len(self.configuration['log']) > self.log_length:
+            self.configuration['log'].pop(0)
 
 
