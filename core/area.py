@@ -56,7 +56,20 @@ class NeuronArea(Base):
                 else:
                     dw = w
                 self.weight[i, j] += correlation * product_x * dw
-            
+
+    @ti.kernel
+    def update_weight_2(self):
+        for i in ti.ndrange(self.n):
+            weight_sum = 0
+            for j in range(self.m):
+                tar = (self.output_position[i] + j) % self.n
+                if tar == i:
+                    continue
+                self.weight[i, j] += self.last_state * self.current_state[tar]
+                weight_sum += self.weight[i, j]
+            for j in range(self.m):
+                self.weight[i, j] /= weight_sum
+
     def update(self):
         self.update_state()
         print("%s: update_state done" % self.name)

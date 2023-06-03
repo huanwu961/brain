@@ -93,7 +93,7 @@ class Base:
             if isinstance(_item, ti.ScalarField):
                 print(f'[{self.name}]: loading array: ' + f'{_item_str}' + '...')
                 try:
-                    _item.from_numpy(os.path.join(root_path, "array", _item_str + ".npy"))
+                    _item.from_numpy(np.load(os.path.join(root_path, "array", _item_str + ".npy")))
                 except FileNotFoundError:
                     print(f'[{_item_str}] not found, exit...')
                     exit()

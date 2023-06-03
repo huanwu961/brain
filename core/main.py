@@ -20,10 +20,13 @@ if __name__ == '__main__':
 
     visual_main_conn = NeuronConnection(visual.nueron_array, main_array, [0, 512*512*3], [0, 512*512*3])
     
-    brain.add_area(main_array)
-    brain.add_area(visual.nueron_array)
-    brain.add_sense(visual)
-    brain.add_connection(visual_main_conn)
+    brain.add(main_array)
+    brain.add(visual.nueron_array)
+    brain.add(visual)
+    brain.add(visual_main_conn)
+
+    brain.init()
+
     for conn in brain.connections:
         conn.connect()
     

@@ -26,7 +26,6 @@ class Brain(Base):
             elif isinstance(child, NeuronSense):
                 self.senses.append(child)
             elif isinstance(child, NeuronConnection):
-                self.connections.append(child)
                 self.areas.append(child.neuron_array)
             elif isinstance(child, NeuronAction):
                 self.actions.append(child)
@@ -72,7 +71,7 @@ class Brain(Base):
             if action.name == name:
                 return action
         return None
-            
+
     def print_info(self):
         print("Read time: %f" % (self.info['read_time'] - self.info['start']))
         print("Connection time: %f" % (self.info['connection_time'] - self.info['read_time']))

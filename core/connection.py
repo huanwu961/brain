@@ -1,6 +1,7 @@
 import taichi as ti
 import numpy as np
 from base import Base
+import utils
 
 
 @ti.data_oriented
@@ -25,6 +26,8 @@ class NeuronConnection(Base):
         self.out_length = out_pos[1] - out_pos[0]
         self.output_position = ti.field(dtype=ti.i32, shape=self.in_length)
         self.out_array_state = ti.field(dtype=ti.f32, shape=self.out_length)
+        self.in_array_state = ti.field(dtype=ti.f32, shape=self.out_length)
+        self.kl_div = 0
         self.init_topology()
         print("Connection %s initialized with type=%s, weight=%f, m=%d" % (self.name, self.conn_type, self.weight, self.m))
         print("ready to connect, waiting for target area...")
@@ -54,17 +57,38 @@ class NeuronConnection(Base):
             out = (self.output_position[i] + j) % self.out_length
             self.out_array.cumulative_state[out] += self.in_array.current_state[self.in_pos[0]+i] * self.weight
             self.out_array.cumulative_weight[out] += self.weight
-
-    @ti.kernel
-    def view_update(self):
-        for i in range(self.out_length):
-            self.out_array_state[i] = self.out_array.current_state[self.out_pos[0]+i]
+            self.in_array_state[j] = self.out_array.cumulative_state[out]
 
     def view_connection(self, in_shape, out_shape):
         in_frame = self.in_array.current_state.to_numpy()
-        print(np.max(in_frame))
         in_frame = in_frame.reshape(in_shape) * 255
         out_frame = self.out_array_state.to_numpy()
         out_frame = out_frame.reshape(out_shape) * 255
         return in_frame, out_frame
-        
+
+    @ti.kernel
+    def calc_kl_divergence(self):
+        self.kl_div = 0
+
+        # calculate softmax of in_array_state and out_array_state
+        e_in_sum = 0
+        e_out_sum = 0
+        for I in ti.grouped(self.out_array_state):
+            # separate the pure generated information from outside input
+            self.out_array_state[I] = ti.math.e ** ((self.in_array.cumulate_state[I] - self.in_array_state[I] * self.weight) / \
+                                      (self.out_array.cumulate_weight[I] - self.weight))
+            self.in_array_state[I] = ti.math.e ** self.in_array_state[I]
+            e_in_sum += self.in_array_state[I]
+            e_out_sum += self.out_array_state[I]
+
+        for I in ti.grouped(self.out_array_state):
+            self.in_array_state[I] /= e_in_sum
+            self.out_array_state[I] /= e_out_sum
+
+        # calculate kl_divergence
+        # since we are using out_array_state to simulate the distribution of in_array_state,
+        # then KL(p|q) will be KL(in|out) = -in * log(in/out)
+        for I in ti.grouped(self.out_array_state):
+            self.kl_div += self.in_array_state[I] * \
+             ti.log(self.in_array_state[I] / self.out_array_state[I])
+
