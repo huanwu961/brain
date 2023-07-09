@@ -1,19 +1,30 @@
 import sys
 sys.path.append('/Users/wuhuan/PycharmProjects/brain/core')
 
-import base
+from core import base, utils
 import brain
 import area
 import connection
 import sense
 import action
-import utils
 
-from base import Base
 from brain import Brain
 from area import NeuronArea
+from area import SmallWorldArea
 from connection import NeuronConnection
 from sense import NeuronSense
+from sense import VisualSense
+from action import NeuronAction
+from base import Base
 
 
-__all__ = ["NeuronSense", "NeuronConnection", "NeuronArea", "Base", "Brain"]
+__all__ = [
+    "NeuronSense",
+    "NeuronConnection",
+    "NeuronArea",
+    "NeuronAction",
+    "Base",
+    "Brain",
+    "VisualSense",
+    "SmallWorldArea"
+]
