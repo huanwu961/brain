@@ -12,7 +12,6 @@ class NeuronArea(Base):
             self.m = m  # output size
         self.topology = {}
 
-        print("NeuronArea %s initialized with n=%d, m=%d" % (name, self.n, self.m))
         self.current_state = ti.field(dtype=ti.f32, shape=self.n)
         self.cumulative_state = ti.field(dtype=ti.f32, shape=self.n)
         self.cumulative_weight = ti.field(dtype=ti.f32, shape=self.n)
@@ -20,13 +19,24 @@ class NeuronArea(Base):
         
         self.output_position = ti.field(dtype=ti.i32, shape=self.n)
         self.weight = ti.field(dtype=ti.f32, shape=(self.n, self.m))
+        self.last_weight = ti.field(dtype=ti.f32, shape=(self.n, self.m))
+        self.weight_diff = ti.field(dtype=ti.f32, shape=(1))
 
+        self.init()
+
+    @ti.kernel
+    def init(self):
         self.weight.fill(0.5)
+        for i in range(self.n):
+            self.output_position[i] = i
+        print("NeuronArea %s initialized with n=%d, m=%d" % (self.name, self.n, self.m))
 
     @ti.kernel
     def update_state(self):
+        # set the last state to current state
         for i in range(self.n):
             self.last_state[i] = self.current_state[i]
+        # gather input from others and store them in cumulative_state
         for i, j in ti.ndrange(self.n, self.m):
             tar = (self.output_position[i] + j) % self.n
             if tar == i:
@@ -35,9 +45,9 @@ class NeuronArea(Base):
             self.cumulative_weight[tar] += self.weight[i, j]
         for i in range(self.n):
             if self.cumulative_weight[i] == 0:
-                self.current_state[i] = 0
+                self.cumulative_weight[i] = 1
             else:
-                self.current_state[i] = self.cumulative_state[i] / self.cumulative_weight[i]
+                self.current_state[i] = 0.3*self.last_state[i] + 0.7*self.cumulative_state[i] / self.cumulative_weight[i]
 
     @ti.kernel
     def update_weight(self):
@@ -51,33 +61,52 @@ class NeuronArea(Base):
                 dw = self.weight[i, j]
                 if dw > 0.5:
                     dw = 1 - dw
-                self.weight[i, j] += correlation * product_x * dw
+                self.weight[i, j] += 100*correlation * product_x * dw
 
     @ti.kernel
     def update_weight_2(self):
         for i in ti.ndrange(self.n):
-            weight_sum = 0
+            weight_sum = 0.0
             for j in range(self.m):
                 tar = (self.output_position[i] + j) % self.n
                 if tar == i:
                     continue
-                self.weight[i, j] += self.last_state * self.current_state[tar]
+                self.weight[i, j] += ti.pow(2, self.last_state[tar]) * ti.pow(2, self.current_state[i])
                 weight_sum += self.weight[i, j]
             for j in range(self.m):
                 self.weight[i, j] /= weight_sum
 
+    @ti.kernel
+    def update_weight_3(self):
+        for i, j in ti.ndrange(self.n, self.m):
+            tar = (self.output_position[i] + j) % self.n
+            if tar == i:
+                continue
+            self.weight[i, j] += 100 * (self.last_state[tar] * self.current_state[i] - self.current_state[tar] * self.last_state[i])
+
     def update(self):
         self.update_state()
-        print("%s: update_state done" % self.name)
-        self.update_weight()
-        print("%s: update_weight done" % self.name)
+        self.update_weight_2()
 
     @ti.kernel
     def clear_cumulative(self):
         for i in range(self.n):
             self.cumulative_state[i] = 0
             self.cumulative_weight[i] = 0
+            
+    @ti.kernel
+    def clear_half_state(self):
+        for i in range(int(self.n/16)):
+            self.current_state[i] = 0.5
+            
+    @ti.kernel
+    def random_pertubation(self):
+        for i in range(int(self.n)):
+            self.current_state[i] += 0.5 * (ti.random(float) - 0.5)
 
+    @ti.kernel
+    def monitor(self):
+        pass
 
 
 @ti.data_oriented
@@ -87,11 +116,12 @@ class SmallWorldArea(NeuronArea):
         self.class_name = 'SmallWorldArea'
         self.topology["type"] = "small_world"
         self.alpha = alpha
+        self.output_shift_sum = ti.field(dtype=ti.int32, shape=(1))
         self.topology['alpha'] = self.alpha
-        print("start init topology...")
         self.init_topology()
-        print("finished init topology")
-        
+        self.calc_output_shift()
+        print("shift sum", self.output_shift_sum[0])
+
     @ti.kernel
     def init_topology(self):
         for i in range(self.n):
@@ -100,5 +130,10 @@ class SmallWorldArea(NeuronArea):
             sign = -1
             if s > 0.5:
                 sign = 1
-            random_shift = int(1 / r * r) * sign
-            self.output_position[i] = i - self.m // 2 + random_shift
+            random_shift = 5*int(1 / r * r) * sign
+            self.output_position[i] = int(r * self.n)  #(i - self.m // 2 + random_shift) % self.n
+
+    @ti.kernel
+    def calc_output_shift(self):
+        for i in range(self.n):
+            self.output_shift_sum[0] += ti.abs(self.output_position[i] - i)

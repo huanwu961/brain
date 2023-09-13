@@ -1,3 +1,6 @@
+import random
+
+
 def json_check(obj):
     success = True
     if isinstance(obj, dict):
@@ -11,3 +14,7 @@ def json_check(obj):
     else:
         success = False
     return success
+
+
+def name(prefix):
+    return str(prefix) + str(int(random.random()*1000))

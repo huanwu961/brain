@@ -81,7 +81,7 @@ class Base:
         os.makedirs(array_dir, exist_ok=True)
         for _item_name in dir(self):
             _item = getattr(self, _item_name)
-            if isinstance(_item, ti.ScalarField):
+            if isinstance(_item, ti.VectorField):
                 np.save(os.path.join(array_dir, _item_name + ".npy"), _item.to_numpy())
 
     def config(self):
@@ -93,7 +93,7 @@ class Base:
 
         for _item_str in dir(self):
             _item = getattr(self, _item_str)
-            if isinstance(_item, ti.ScalarField):
+            if isinstance(_item, ti.VectorField):
                 self.configuration["array"].append({
                     "name": _item_str,
                     "dtype": str(_item.dtype),
@@ -104,10 +104,9 @@ class Base:
         log = {'time': time.time()}
         item_strs = dir(self)
         for item in item_strs:
-            if isinstance(getattr(self, item), ti.ScalarField):
+            if isinstance(getattr(self, item), ti.VectorNdarray):
                 array = getattr(self, item).to_numpy()
 
-                # print("[monitor]:", item, array)
                 array_log = {
                     "max": float(np.max(array)),
                     "min": float(np.min(array)),

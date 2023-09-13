@@ -18,6 +18,8 @@ class NeuronSense(Base):
             for length in shape:
                 self.size *= length
         self.neuron_array = None
+        if isinstance(self.source, int):
+            self.buffer = ti.field(dtype=ti.f32, shape=self.shape)
 
     def create_buffer_area(self):
         self.neuron_array = NeuronArea(self.size, 1, self.name+'_area')
@@ -47,31 +49,54 @@ class VisualSense(NeuronSense):
 
         if self.mode == 'webcam':
             self.videocapture = cv.VideoCapture(source)
+            ret, frame = self.videocapture.read()
+            self.buffer = ti.field(dtype=ti.f32, shape=frame.shape)
         elif self.mode == 'video':
             self.videocapture = cv.VideoCapture(source)
+            ret, frame = self.videocapture.read()
+            self.buffer = ti.field(dtype=ti.f32, shape=frame.shape)
+            print("view")
         elif self.mode == 'image':
             self.image = cv.imread(source)
+            self.buffer = ti.field(dtype=ti.f32, shape=self.image.shape)
         print("VideoCapture initialized")
-    
+
     def read(self):
-        start = time.time()
-        print('[visual sense]: ', self.mode)
+        frame = None
         if self.mode in ['webcam', 'video']:
             ret, frame = self.videocapture.read()
         elif self.mode == 'image':
             frame = cv.imread(self.source)
-        start1 = time.time()
-        # frame = frame.astype(np.float32)
+
         # reshape the frame to the input size
-        frame = cv.resize(frame, self.shape[:2]).astype(np.float32) / 255
-
+        #print(self.shape[:2])
+        #cv.imshow("pre", frame)
+        #cv.imshow("frame", frame)
+        s1 = time.time()
+        self.buffer.from_numpy(frame)
         s2 = time.time()
-
-        print(self.neuron_array.current_state.shape)
-        print(frame.reshape(-1).shape)
-        self.neuron_array.current_state.from_numpy(frame.reshape(-1))
+        #self.neuron_array.current_state.from_numpy(frame.reshape(-1))
+        self.reshape()
         s3 = time.time()
+        print("buf", s2-s1)
+        print("reshape", s3-s2)
+        '''
         print("read: %f" % (start1 - start))
         print("resize: %f" % (s2 - start1))
         print("from_numpy: %f" % (s3 - s2))
-        print("VisualSense: read done")
+        '''
+        # print("VisualSense: read done")
+
+    @ti.kernel
+    def reshape(self):
+        a = self.shape[0]
+        b = self.shape[1]
+        c = self.shape[2]
+        a_ratio = self.buffer.shape[0] / a
+        b_ratio = self.buffer.shape[1] / b
+        for i in range(self.size):
+            x = int(i / (b*c))
+            y = int((i % (b*c)) / c)
+            z = (i % (b*c)) % c
+            # sampling as reshape
+            self.neuron_array.current_state[i] = self.buffer[int(x*a_ratio), int(y*b_ratio), z] / 255

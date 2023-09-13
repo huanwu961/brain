@@ -1,5 +1,7 @@
+import json
 import random
 import time
+import cv2
 import psutil
 import os
 from area import SmallWorldArea
@@ -13,7 +15,7 @@ import numpy as np
 
 
 class Brain:
-    def __init__(self, name="brain_"+str(random.randint(0, 1000000)), root='.'):
+    def __init__(self, name="brain_"+str(random.randint(0, 1000000)), root='.', config=None):
         self.name = name
         self.areas = []
         self.connections = []
@@ -22,6 +24,10 @@ class Brain:
         self.children = []
         self.info = {}
         self.root = root
+        if config is not None:
+            self.config = config
+        else:
+            self.config ={"name": self.name, "class_name": "Brain"}
 
     def prepare(self):
         # load areas first, preventing void connection
@@ -30,6 +36,7 @@ class Brain:
                 self.areas.append(child)
                 print("[prepare area]:", child.name, child.n, child.current_state.shape)
 
+        # append children to the correct area
         for child in self.children:
             if isinstance(child, NeuronSense):
                 self.senses.append(child)
@@ -40,8 +47,6 @@ class Brain:
             elif isinstance(child, NeuronConnection):
                 self.connections.append(child)
                 area_1_name, area_2_name = child.name.split('->')
-                print("[Debug]:", area_1_name, area_2_name)
-                print("[Debug]: ", self.get_neuron_area(area_1_name), self.get_neuron_area(area_2_name))
                 child.connect(self.get_neuron_area(area_1_name), self.get_neuron_area(area_2_name))
 
     def run(self, duration=None, max_turn=None):
@@ -52,29 +57,28 @@ class Brain:
             self.info['start'] = time.time()
             for sensor in self.senses:
                 sensor.read()
+                print("sensor:", np.reshape(sensor.neuron_array.current_state.to_numpy(), [1, 1, 3])*255)
             self.info['read_time'] = time.time()
             for connection in self.connections:
-                print("[value]:", np.max(connection.out_array.cumulative_state.to_numpy()))
+                # print("connection:", connection.in_array.current_state.to_numpy())
                 connection.update()
-                print("[value]:", np.max(connection.out_array.cumulative_state.to_numpy()))
-                
+
             self.info['connection_time'] = time.time()
             for area in self.areas:
-                print("[]:", np.max(area.cumulative_state.to_numpy()))
                 area.update()
+                # print("area:", area.current_state.to_numpy())
             self.info['main_update_time'] = time.time()
             for action in self.actions:
                 action.act()
             for child in self.children:
-                print(f"[{child.name}]: logging...")
+                # print(f"[{child.name}]: logging...")
                 child.monitor()
             for area in self.areas:
                 area.clear_cumulative()
-            self.print_info()
 
             turn += 1
             if turn >= max_turn:
-                self.save(root=self.root)
+                # self.save(root=self.root)
                 print(f"training finished, [{turn} turns]")
                 break
             elif time.time() - start_time > duration:
@@ -105,17 +109,11 @@ class Brain:
                 return action
         return None
 
-    def print_info(self):
-        print("Read time: %f" % (self.info['read_time'] - self.info['start']))
-        print("Connection time: %f" % (self.info['connection_time'] - self.info['read_time']))
-        print("Main update time: %f" % (self.info['main_update_time'] - self.info['connection_time']))
-        self.info['memory_size'] = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
-        print("mem usage: %f MB" % self.info['memory_size'])
-
     def add(self, obj):
         self.children.append(obj)
 
     def save(self, root):
+        # save children objects
         brain_root = os.path.join(root, self.name)
         os.makedirs(brain_root, exist_ok=True)
 
@@ -123,12 +121,37 @@ class Brain:
             print('[configuration]: ', child.configuration)
             child.save(brain_root)
 
+        # save config file
+        config_path = os.path.join(brain_root, "config.json")
+        with open(config_path, 'w+') as f:
+            json.dump(self.config, f)
+
     def load(self, root):
+        # load child object
         child_name = os.listdir(root)
         child_config_paths = []
         for child in child_name:
             child_path = os.path.join(root, child)
-            child_config_paths.append(child_path)
+            if os.path.isdir(child_path):
+                child_config_paths.append(child_path)
         factory = Factory(child_config_paths)
         self.children = factory.produce()
+
+        # load config file
+        config_path = os.path.join(root, "config.json")
+        with open(config_path, 'r+') as f:
+            self.config = json.load(f)
+
+    def search(self, root):
+        brains = []
+        os.chdir(root)
+        names = os.listdir()
+        for name in names:
+            config_path = os.path.join(os.getcwd(), name, "config.json")
+            if os.path.exists(config_path):
+                with open(config_path) as f:
+                    config = json.load(f)
+                if config["class_name"] is not None and config["class_name"] == "Brain":
+                    brains.append(os.path.join(os.getcwd(), name))
+        return brains
 

@@ -1,6 +1,7 @@
+import numpy as np
+
 import taichi as ti
 from core.base import Base
-
 
 @ti.data_oriented
 class NeuronConnection(Base):
@@ -22,6 +23,7 @@ class NeuronConnection(Base):
             self.in_length = in_pos[1] - in_pos[0]
             self.out_length = out_pos[1] - out_pos[0]
         self.kl_div = ti.field(dtype=ti.f32, shape=1)
+        self.l1_norm = ti.field(dtype=ti.f32, shape=1)
         self.output_position = ti.field(dtype=ti.i32, shape=self.in_length)
         self.out_array_state = ti.field(dtype=ti.f32, shape=self.out_length)
         self.in_array_state = ti.field(dtype=ti.f32, shape=self.out_length)
@@ -43,8 +45,8 @@ class NeuronConnection(Base):
                 shift = int(i / self.in_length * self.out_length)
                 self.output_position[i] = shift + self.out_pos[0]
 
-        print("Add connection type %s from [%d, %d] to [%d, %d]" %
-              (self.conn_type, self.in_pos[0], self.in_pos[1], self.out_pos[0], self.out_pos[1]))
+        # print("Add connection type %s from [%d, %d] to [%d, %d]" % \
+        #      (self.conn_type, self.in_pos[0], self.in_pos[1], self.out_pos[0], self.out_pos[1]))
     
     @ti.kernel
     def update(self):
@@ -52,7 +54,7 @@ class NeuronConnection(Base):
             out = (self.output_position[i] + j) % self.out_length
             self.out_array.cumulative_state[out] += self.in_array.current_state[self.in_pos[0]+i] * self.weight
             self.out_array.cumulative_weight[out] += self.weight
-            self.in_array_state[j] = self.out_array.cumulative_state[out]
+            self.in_array_state[j] = self.in_array.current_state[self.in_pos[0]+i]
 
     def view_connection(self, in_shape, out_shape):
         in_frame = self.in_array.current_state.to_numpy()
@@ -60,6 +62,17 @@ class NeuronConnection(Base):
         out_frame = self.out_array_state.to_numpy()
         out_frame = out_frame.reshape(out_shape) * 255
         return in_frame, out_frame
+
+    @ti.kernel
+    def calc_l1_norm(self):
+        self.l1_norm[0] = 0
+        for I in ti.grouped(self.out_array_state):
+            self.out_array_state[I] = (self.out_array.cumulative_state[I] - self.in_array.current_state[I] * self.weight) / \
+                                            (self.out_array.cumulative_weight[I] - self.weight)
+            self.l1_norm[0] += ti.abs(self.out_array_state[I] - self.in_array.current_state[I])
+
+
+
 
     @ti.kernel
     def calc_kl_divergence(self):
@@ -89,7 +102,25 @@ class NeuronConnection(Base):
              ti.log(self.in_array_state[I] / self.out_array_state[I])
 
     def monitor(self):
+        # call the base monitor first
+        # it will append a new log at position "self.configuration['log'][-1]"
         super().monitor()
-        print('[connection monitor]: calculate kl divergence')
-        self.calc_kl_divergence()
+        # print('[connection monitor]: calculate kl divergence')
+        # self.calc_kl_divergence()
+
+        #------ TO BE CONTINEUED ------
+        self.calc_l1_norm()
+        print("l1_norm", float(self.l1_norm[0]))
         self.configuration['log'][-1]['kl_div'] = float(self.kl_div[0])
+        out_pic = self.out_array_state.to_numpy()
+        in_pic = self.in_array_state.to_numpy()
+
+        out_pic_ = self.out_array.current_state.to_numpy()
+
+        in_pic_ = self.in_array.current_state.to_numpy()
+
+        # print("[out_pic]:", self.out_array.cumulative_state.to_numpy())
+        # print("[in_pic]:", self.in_array.current_state.to_numpy() * 255)
+        #cv2.imshow("out_pic", out_frame)
+        #cv2.imshow("in_pic", in_frame)
+        #key = cv2.waitKey(1)
