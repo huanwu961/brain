@@ -81,7 +81,7 @@ class Base:
         os.makedirs(array_dir, exist_ok=True)
         for _item_name in dir(self):
             _item = getattr(self, _item_name)
-            if isinstance(_item, ti.VectorField):
+            if isinstance(_item, ti.Field):
                 np.save(os.path.join(array_dir, _item_name + ".npy"), _item.to_numpy())
 
     def config(self):
@@ -93,7 +93,7 @@ class Base:
 
         for _item_str in dir(self):
             _item = getattr(self, _item_str)
-            if isinstance(_item, ti.VectorField):
+            if isinstance(_item, ti.Field):
                 self.configuration["array"].append({
                     "name": _item_str,
                     "dtype": str(_item.dtype),

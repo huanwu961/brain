@@ -7,8 +7,7 @@ from core.base import Base
 class NeuronConnection(Base):
     def __init__(self, in_name=None, out_name=None, in_pos=(0, 1), out_pos=(0, 1), weight=1, m=1,
                  conn_type="continuous", config=None):
-        super().__init__('empty', 'NeuronConnection', config=config)
-        print(self.name)
+        super().__init__('empty_connection', 'NeuronConnection', config=config)
         if config is None:
             self.name = "%s->%s" % (in_name, out_name)
             self.in_name = in_name
@@ -30,7 +29,6 @@ class NeuronConnection(Base):
         self.init_topology()
         print("Connection %s initialized with type=%s, weight=%f, m=%d" % (self.name, self.conn_type, self.weight, self.m))
         print("ready to connect, waiting for target area...")
-        print(self.output_position)
 
     def connect(self, area1, area2):
         self.in_array = area1

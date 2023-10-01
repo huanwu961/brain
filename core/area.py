@@ -12,16 +12,29 @@ class NeuronArea(Base):
             self.m = m  # output size
         self.topology = {}
 
-        self.current_state = ti.field(dtype=ti.f32, shape=self.n)
-        self.cumulative_state = ti.field(dtype=ti.f32, shape=self.n)
-        self.cumulative_weight = ti.field(dtype=ti.f32, shape=self.n)
-        self.last_state = ti.field(dtype=ti.f32, shape=self.n)
-        
-        self.output_position = ti.field(dtype=ti.i32, shape=self.n)
-        self.weight = ti.field(dtype=ti.f32, shape=(self.n, self.m))
-        self.last_weight = ti.field(dtype=ti.f32, shape=(self.n, self.m))
-        self.weight_diff = ti.field(dtype=ti.f32, shape=(1))
+        self.field_builder = ti.FieldsBuilder()
 
+        self.current_state = ti.field(dtype=ti.f32)
+        self.cumulative_state = ti.field(dtype=ti.f32)
+        self.cumulative_weight = ti.field(dtype=ti.f32)
+        self.last_state = ti.field(dtype=ti.f32)
+        self.output_position = ti.field(dtype=ti.i32)
+
+        self.weight = ti.Vector.field(dtype=ti.f32, n=self.m)
+        self.last_weight = ti.Vector.field(dtype=ti.f32, n=self.m)
+
+        self.weight_diff = ti.field(dtype=ti.f32)
+
+        self.field_builder.dense(ti.i, self.n).place(self.current_state,
+                                                     self.last_state,
+                                                     self.cumulative_state,
+                                                     self.cumulative_weight,
+                                                     self.output_position
+                                                     )
+        self.field_builder.dense(ti.i, self.n).place(self.weight)
+        self.field_builder.dense(ti.i, self.n).place(self.last_weight)
+        self.field_builder.dense(ti.i, 1).place(self.weight_diff)
+        self.field_builder.finalize()
         self.init()
 
     @ti.kernel
@@ -41,8 +54,8 @@ class NeuronArea(Base):
             tar = (self.output_position[i] + j) % self.n
             if tar == i:
                 continue
-            self.cumulative_state[tar] += self.weight[i, j] * self.current_state[i]
-            self.cumulative_weight[tar] += self.weight[i, j]
+            self.cumulative_state[tar] += self.weight[i][j] * self.current_state[i]
+            self.cumulative_weight[tar] += self.weight[i][j]
         for i in range(self.n):
             if self.cumulative_weight[i] == 0:
                 self.cumulative_weight[i] = 1
@@ -58,10 +71,10 @@ class NeuronArea(Base):
                     continue
                 correlation = (1 - 2*self.last_state[i]) * (1 - 2*self.current_state[tar])
                 product_x = self.last_state[i] * self.current_state[tar]
-                dw = self.weight[i, j]
+                dw = self.weight[i][j]
                 if dw > 0.5:
                     dw = 1 - dw
-                self.weight[i, j] += 100*correlation * product_x * dw
+                self.weight[i][j] += 100*correlation * product_x * dw
 
     @ti.kernel
     def update_weight_2(self):
@@ -71,10 +84,10 @@ class NeuronArea(Base):
                 tar = (self.output_position[i] + j) % self.n
                 if tar == i:
                     continue
-                self.weight[i, j] += ti.pow(2, self.last_state[tar]) * ti.pow(2, self.current_state[i])
-                weight_sum += self.weight[i, j]
+                self.weight[i][j] += ti.pow(2, self.last_state[tar]) * ti.pow(2, self.current_state[i])
+                weight_sum += self.weight[i][j]
             for j in range(self.m):
-                self.weight[i, j] /= weight_sum
+                self.weight[i][j] /= weight_sum
 
     @ti.kernel
     def update_weight_3(self):
@@ -82,7 +95,7 @@ class NeuronArea(Base):
             tar = (self.output_position[i] + j) % self.n
             if tar == i:
                 continue
-            self.weight[i, j] += 100 * (self.last_state[tar] * self.current_state[i] - self.current_state[tar] * self.last_state[i])
+            self.weight[i][j] += 100 * (self.last_state[tar] * self.current_state[i] - self.current_state[tar] * self.last_state[i])
 
     def update(self):
         self.update_state()
@@ -118,12 +131,11 @@ class SmallWorldArea(NeuronArea):
         self.alpha = alpha
         self.output_shift_sum = ti.field(dtype=ti.int32, shape=(1))
         self.topology['alpha'] = self.alpha
-        self.init_topology()
+        self.init()
         self.calc_output_shift()
-        print("shift sum", self.output_shift_sum[0])
 
     @ti.kernel
-    def init_topology(self):
+    def init(self):
         for i in range(self.n):
             r = ti.random(float)
             s = ti.random(float)

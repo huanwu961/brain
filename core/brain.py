@@ -47,17 +47,17 @@ class Brain:
             elif isinstance(child, NeuronConnection):
                 self.connections.append(child)
                 area_1_name, area_2_name = child.name.split('->')
-                child.connect(self.get_neuron_area(area_1_name), self.get_neuron_area(area_2_name))
+                child.connect(self.get_child(area_1_name), self.get_child(area_2_name))
 
-    def run(self, duration=None, max_turn=None):
+    def run(self, duration=None, max_turn=None, auto_save=False, save_gap=100):
         start_time = time.time()
         self.prepare()
         turn = 0
         while True:
+            turn_start = time.time()
             self.info['start'] = time.time()
             for sensor in self.senses:
                 sensor.read()
-                print("sensor:", np.reshape(sensor.neuron_array.current_state.to_numpy(), [1, 1, 3])*255)
             self.info['read_time'] = time.time()
             for connection in self.connections:
                 # print("connection:", connection.in_array.current_state.to_numpy())
@@ -75,6 +75,15 @@ class Brain:
                 child.monitor()
             for area in self.areas:
                 area.clear_cumulative()
+            turn_end = time.time()
+            if turn % 10 == 0:
+                print(f"[training]: {turn} turn, ({1/(turn_end - turn_start)} fps)")
+            if turn % save_gap == 0:
+                if auto_save is True:
+                    self.save(self.root)
+
+
+
 
             turn += 1
             if turn >= max_turn:
@@ -85,29 +94,7 @@ class Brain:
                 print(f"training finished, [{duration}s]")
                 break
 
-    def get_neuron_area(self, name):
-        for area in self.areas:
-            if area.name == name:
-                return area
-        return None
 
-    def get_neuron_connection(self, name):
-        for connection in self.connections:
-            if connection.name == name:
-                return connection
-        return None
-    
-    def get_neuron_sense(self, name):
-        for sense in self.senses:
-            if sense.name == name:
-                return sense
-        return None
-    
-    def get_neuron_action(self, name):
-        for action in self.actions:
-            if action.name == name:
-                return action
-        return None
 
     def add(self, obj):
         self.children.append(obj)
@@ -155,3 +142,34 @@ class Brain:
                     brains.append(os.path.join(os.getcwd(), name))
         return brains
 
+    # ----------------- get neuron object -----------------
+    def get_neuron_area(self, name):
+        for area in self.areas:
+            if area.name == name:
+                return area
+        return None
+
+    def get_neuron_connection(self, name):
+        for connection in self.connections:
+            if connection.name == name:
+                return connection
+        return None
+    
+    def get_neuron_sense(self, name):
+        for sense in self.senses:
+            if sense.name == name:
+                return sense
+        return None
+    
+    def get_neuron_action(self, name):
+        for action in self.actions:
+            if action.name == name:
+                return action
+        return None
+
+    def get_child(self, name):
+        for child in self.children:
+            if child.name == name:
+                return child
+        print(f"[brain]: child {name} not found!")
+        return None

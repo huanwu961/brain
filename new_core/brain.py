@@ -1,6 +1,7 @@
 import taichi as ti
 import json
 import time
+import plugin
 
 class Brain:
     def __init__(self, name, root=None):
@@ -31,23 +32,56 @@ class Brain:
                 actuator.write()
 
         # stop and save training when duration or max_turn is reached
-        turn += 1
-        if turn >= max_turn:
-            self.save(root=self.root)
-            print(f"[Info]: brain {self.name} saved")
-            print(f"[Info]: brain {self.name} finished [{turn} turns]")
-            break
-        elif time.time() - start_time >= duration:
-            self.save(root=self.root)
-            print(f"[Info]: brain {self.name} saved")
-            print(f"[Info]: brain {self.name} finished [{time.time() - start_time} seconds]")
-            break
-        
+            turn += 1
+            if turn >= max_turn:
+                self.save(root=self.root)
+                print(f"[Info]: brain {self.name} saved")
+                print(f"[Info]: brain {self.name} finished [{turn} turns]")
+                break
+            elif time.time() - start_time >= duration:
+                self.save(root=self.root)
+                print(f"[Info]: brain {self.name} saved")
+                print(f"[Info]: brain {self.name} finished [{time.time() - start_time} seconds]")
+                break
 
     def init(self):
         # load groups
         for connection in self.connections:
             connection.init()
+
+    def save(self):
+        # init brain root
+        brain_root = os.path.join(self.root, self.name)
+        os.makedirs(brain_root, exist_ok=True)
+
+        # save groups
+        for group in self.groups:
+            group.save()
+        for connection in self.connections:
+            connection.save()
+        for sense in self.senses:
+            sense.save()
+        for actuator in self.actuators:
+            actuator.save()
+
+        # save config file
+        config_path = os.path.join(brain_root, "config.json")
+        with open(config_path, 'w+') as f:
+            json.dump(self.config, f)
+
+    def load(self):
+        # load child objects
+        child_name = os.listdir(self.root)
+        child_config_paths = []
+        for child in child_name:
+            child_config_path = os.path.join(self.root, child, "config.json")
+            if os.path.isfile(child_config_path):
+                child_config_paths.append(root, child)
+                if os.path.isdir(child_path):
+                    child_config_paths.append(child_path)
+
+            plugin = Plugin()
+            
 
     # laod function
     def add_group(self, group):

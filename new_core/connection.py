@@ -2,7 +2,7 @@ from base import Base
 import taichi as ti
 import json
 
-class Connection(Base):
+class NeuronConnection(Base):
     def __init__(self,
                  from_name: str, # name of the pre-synaptic neuron group
                  to_name: str,  # name of the post-synaptic neuron group

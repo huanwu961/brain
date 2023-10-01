@@ -17,13 +17,10 @@ class NeuronSense(Base):
             self.size = 1
             for length in shape:
                 self.size *= length
-        self.neuron_array = None
-        if isinstance(self.source, int):
-            self.buffer = ti.field(dtype=ti.f32, shape=self.shape)
+        self.current_state = ti.field(dtype=ti.f32, shape=self.size)
 
-    def create_buffer_area(self):
-        self.neuron_array = NeuronArea(self.size, 1, self.name+'_area')
-        return self.neuron_array
+    def get_source_shape(self):
+        pass
 
     def connect(self, area):
         self.neuron_array = area
@@ -37,6 +34,7 @@ class VisualSense(NeuronSense):
         self.class_name = 'VisualSense'
         self.source_type = 'visual'
         self.mode = ''
+        self.shape = shape
         if isinstance(source, str):
             post_fix = source.split('.')[-1]
             print('[sense]:', source.split('.')[-1])
@@ -68,24 +66,8 @@ class VisualSense(NeuronSense):
         elif self.mode == 'image':
             frame = cv.imread(self.source)
 
-        # reshape the frame to the input size
-        #print(self.shape[:2])
-        #cv.imshow("pre", frame)
-        #cv.imshow("frame", frame)
-        s1 = time.time()
         self.buffer.from_numpy(frame)
-        s2 = time.time()
-        #self.neuron_array.current_state.from_numpy(frame.reshape(-1))
         self.reshape()
-        s3 = time.time()
-        print("buf", s2-s1)
-        print("reshape", s3-s2)
-        '''
-        print("read: %f" % (start1 - start))
-        print("resize: %f" % (s2 - start1))
-        print("from_numpy: %f" % (s3 - s2))
-        '''
-        # print("VisualSense: read done")
 
     @ti.kernel
     def reshape(self):
@@ -99,4 +81,9 @@ class VisualSense(NeuronSense):
             y = int((i % (b*c)) / c)
             z = (i % (b*c)) % c
             # sampling as reshape
-            self.neuron_array.current_state[i] = self.buffer[int(x*a_ratio), int(y*b_ratio), z] / 255
+            self.current_state[i] = self.buffer[int(x*a_ratio), int(y*b_ratio), z] / 255
+
+    def get_source_shape(self):
+        ret, frame = self.videocapture.read()
+        return frame.shape
+
